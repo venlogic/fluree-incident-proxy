@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Incident Pivot Demo v2 — Fluree-wired, Minimal Safe Mode</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@500,700&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="light"] {
+  --color-bg:#f7f6f2; --color-surface:#f9f8f5; --color-surface-2:#fbfbf9; --color-surface-offset:#f3f0ec;
+  --color-surface-dynamic:#e6e4df; --color-divider:#dcd9d5; --color-border:#d4d1ca; --color-text:#28251d;
+  --color-text-muted:#6e6b66; --color-text-faint:#9b9994; --color-text-inverse:#f9f8f4; --color-primary:#01696f;
+  --color-primary-hover:#0c4e54; --color-primary-highlight:#cedcd8; --color-warning:#964219; --color-error:#a12c7b;
+  --color-success:#437a22; --color-blue:#006494; --radius-sm:.375rem; --radius-md:.5rem; --radius-lg:.75rem;
+  --radius-xl:1rem; --radius-full:9999px; --shadow-sm:0 1px 2px rgba(24,24,24,.06); --shadow-md:0 8px 24px rgba(24,24,24,.08);
+  --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem; --space-5:1.25rem; --space-6:1.5rem;
+  --space-8:2rem; --space-10:2.5rem; --space-12:3rem; --space-16:4rem; --text-xs:clamp(.75rem,.7rem+.25vw,.875rem);
+  --text-sm:clamp(.875rem,.8rem+.35vw,1rem); --text-base:clamp(1rem,.95rem+.25vw,1.05rem); --text-lg:clamp(1.125rem,1rem+.75vw,1.35rem);
+  --text-xl:clamp(1.5rem,1.2rem+1.25vw,2rem); --font-body:'Satoshi', Inter, sans-serif; --font-display:'Cabinet Grotesk', 'Satoshi', sans-serif;
+  --transition:180ms cubic-bezier(.16,1,.3,1);
+}
+[data-theme="dark"] {
+  --color-bg:#171614; --color-surface:#1c1b19; --color-surface-2:#201f1d; --color-surface-offset:#1d1c1a;
+  --color-surface-dynamic:#2d2c2a; --color-divider:#262523; --color-border:#393836; --color-text:#cdccca;
+  --color-text-muted:#94918c; --color-text-faint:#66635e; --color-text-inverse:#2b2a28; --color-primary:#4f98a3;
+  --color-primary-hover:#227f8b; --color-primary-highlight:#313b3b; --color-warning:#bb653b; --color-error:#d163a7;
+  --color-success:#6daa45; --color-blue:#5591c7; --shadow-sm:0 1px 2px rgba(0,0,0,.2); --shadow-md:0 12px 32px rgba(0,0,0,.36);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; }
+body {
+  font-family:var(--font-body); font-size:var(--text-base); color:var(--color-text); background:var(--color-bg);
+  text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased; padding-bottom: 3rem;
+}
+button, input, select { font:inherit; color:inherit; }
+button { border:none; background:none; cursor:pointer; }
+a { color:inherit; }
+:focus-visible { outline:2px solid var(--color-primary); outline-offset:3px; border-radius:var(--radius-sm); }
+.app { display:grid; grid-template-columns: 290px 1fr; grid-template-rows:auto 1fr; min-height:100vh; }
+.sidebar { grid-row:1 / -1; background:var(--color-surface); border-right:1px solid var(--color-divider); padding:var(--space-6); overflow-y:auto; }
+.brand { display:flex; gap:var(--space-3); align-items:center; margin-bottom:var(--space-8); }
+.logo { width:40px; height:40px; color:var(--color-primary); flex-shrink:0; }
+.brand h1 { font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; }
+.brand p { font-size:var(--text-xs); color:var(--color-text-muted); }
+.nav-section { margin-bottom:var(--space-6); }
+.nav-label { font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-faint); margin-bottom:var(--space-3); font-weight:700; }
+.nav-list { display:flex; flex-direction:column; gap:var(--space-2); }
+.nav-btn { display:flex; align-items:center; gap:var(--space-2); padding:var(--space-3); border-radius:var(--radius-md); text-align:left; transition:var(--transition); }
+.nav-btn:hover { background:var(--color-surface-offset); }
+.nav-btn.active { background:var(--color-primary-highlight); }
+.nav-btn strong { display:block; font-size:var(--text-sm); }
+.nav-btn span { display:block; font-size:var(--text-xs); color:var(--color-text-muted); }
+.safe-toggle { display:flex; align-items:center; justify-content:space-between; padding:var(--space-3); border-radius:var(--radius-md); background:var(--color-surface-offset); border:1px solid var(--color-border); }
+.switch { position:relative; width:42px; height:24px; border-radius:var(--radius-full); background:var(--color-success); flex-shrink:0; transition:var(--transition); }
+.switch.off { background:var(--color-error); }
+.switch::after { content:''; position:absolute; top:3px; left:21px; width:18px; height:18px; border-radius:50%; background:#fff; transition:var(--transition); }
+.switch.off::after { left:3px; }
+.header { grid-column:2; display:flex; align-items:center; justify-content:space-between; padding:var(--space-4) var(--space-8); border-bottom:1px solid var(--color-divider); background:var(--color-surface); position:sticky; top:0; z-index:5; flex-wrap:wrap; gap:var(--space-3); }
+.pill { display:inline-flex; align-items:center; gap:var(--space-2); padding:.35rem .75rem; border-radius:var(--radius-full); font-size:var(--text-xs); font-weight:700; background:var(--color-surface-offset); border:1px solid var(--color-border); }
+.pill.ok { color:var(--color-success); border-color:color-mix(in oklab, var(--color-success) 35%, transparent); }
+.pill.warn { color:var(--color-warning); border-color:color-mix(in oklab, var(--color-warning) 35%, transparent); }
+.pill.err { color:var(--color-error); border-color:color-mix(in oklab, var(--color-error) 35%, transparent); }
+.header-actions { display:flex; gap:var(--space-2); align-items:center; }
+.secondary-btn { padding:.5rem 1rem; border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface-2); font-size:var(--text-sm); transition:var(--transition); }
+.secondary-btn:hover { background:var(--color-surface-offset); }
+.icon-btn { width:36px; height:36px; display:grid; place-items:center; border-radius:var(--radius-md); border:1px solid var(--color-border); }
+.main { grid-column:2; padding:var(--space-8); display:flex; flex-direction:column; gap:var(--space-6); }
+.headline { display:flex; justify-content:space-between; align-items:center; gap:var(--space-4); flex-wrap:wrap; }
+.headline h2 { font-family:var(--font-display); font-size:var(--text-xl); margin-bottom:var(--space-2); }
+.headline p { color:var(--color-text-muted); max-width:640px; }
+.card { background:var(--color-surface); border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:var(--space-6); box-shadow:var(--shadow-sm); }
+.card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-4); flex-wrap:wrap; gap:var(--space-2); }
+.card-header h3 { font-family:var(--font-display); font-size:var(--text-lg); margin-top:var(--space-1); }
+.muted { color:var(--color-text-muted); font-size:var(--text-sm); }
+.grid { display:grid; grid-template-columns:1fr; gap:var(--space-6); }
+.top-grid { grid-template-columns: 1.5fr 1fr; }
+@media (max-width: 1100px) { .top-grid { grid-template-columns:1fr; } .app { grid-template-columns:1fr; } .sidebar { display:none; } }
+.config-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+.config-grid label { display:flex; flex-direction:column; gap:var(--space-1); font-size:var(--text-xs); color:var(--color-text-muted); font-weight:700; }
+.config-grid input, .config-grid select { padding:.55rem .75rem; border:1px solid var(--color-border); border-radius:var(--radius-sm); background:var(--color-surface-2); font-size:var(--text-sm); }
+.path { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-4); }
+.path span { font-size:var(--text-xs); padding:.3rem .65rem; border-radius:var(--radius-full); background:var(--color-surface-offset); border:1px solid var(--color-border); }
+.flow-grid { display:grid; grid-template-columns:280px 1fr; gap:var(--space-4); }
+@media (max-width:800px) { .flow-grid { grid-template-columns:1fr; } }
+.step-list { display:flex; flex-direction:column; gap:var(--space-2); max-height:520px; overflow-y:auto; }
+.step { text-align:left; padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--color-border); background:var(--color-surface-2); transition:var(--transition); }
+.step:hover { border-color:var(--color-primary); }
+.step.active { border-color:var(--color-primary); background:var(--color-primary-highlight); }
+.step .meta { font-size:var(--text-xs); color:var(--color-primary); font-weight:700; margin-bottom:.2rem; }
+.step strong { display:block; font-size:var(--text-sm); margin-bottom:.15rem; }
+.detail-box { padding:var(--space-4); border-radius:var(--radius-md); background:var(--color-surface-offset); border:1px solid var(--color-border); }
+.detail-box pre { white-space:pre-wrap; font-size:var(--text-xs); background:var(--color-surface-dynamic); padding:var(--space-3); border-radius:var(--radius-sm); margin:var(--space-3) 0; overflow-x:auto; }
+.detail-box ul { padding-left:1.1rem; display:flex; flex-direction:column; gap:.35rem; font-size:var(--text-sm); }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:var(--text-sm); }
+th, td { text-align:left; padding:.55rem .65rem; border-bottom:1px solid var(--color-divider); }
+th { color:var(--color-text-muted); font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.03em; }
+.masked { color:var(--color-text-faint); font-style:italic; }
+.masked-badge { display:inline-block; margin-left:.4rem; font-size:.65rem; padding:.1rem .4rem; border-radius:var(--radius-full); background:color-mix(in oklab, var(--color-error) 15%, transparent); color:var(--color-error); font-weight:700; }
+.status-line { display:flex; align-items:center; gap:var(--space-2); font-size:var(--text-xs); color:var(--color-text-muted); margin-top:var(--space-3); flex-wrap:wrap; }
+.footer-note { margin-top:var(--space-4); font-size:var(--text-xs); color:var(--color-text-faint); }
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); }
+@media (max-width:900px) { .kpis { grid-template-columns:repeat(2,1fr); } }
+.kpi { background:var(--color-surface); border:1px solid var(--color-divider); border-radius:var(--radius-lg); padding:var(--space-4); }
+.kpi .label { font-size:var(--text-xs); color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:.3rem; }
+.kpi .value { font-family:var(--font-display); font-size:var(--text-xl); font-weight:700; }
+.kpi .sub { font-size:var(--text-xs); color:var(--color-text-faint); }
+.sr-only { position:absolute; left:-9999px; }
+.arch-list { display:flex; flex-direction:column; gap:var(--space-2); font-size:var(--text-sm); }
+.arch-list li { list-style:none; padding:.5rem .75rem; border-radius:var(--radius-sm); background:var(--color-surface-offset); border:1px solid var(--color-border); }
+</style>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" fill="none">
+        <rect x="7" y="7" width="50" height="50" rx="14" stroke="currentColor" stroke-width="4"></rect>
+        <circle cx="24" cy="24" r="6" fill="currentColor"></circle>
+        <circle cx="42" cy="20" r="5" fill="currentColor" opacity=".7"></circle>
+        <circle cx="40" cy="42" r="7" fill="currentColor" opacity=".45"></circle>
+        <path d="M29 25L37 22M27 28L36 37" stroke="currentColor" stroke-width="4" stroke-linecap="round"></path>
+      </svg>
+      <div>
+        <h1>Incident Pivot v2</h1>
+        <p>Fluree-wired · Minimal Safe Mode</p>
+      </div>
+    </div>
+
+    <section class="nav-section">
+      <div class="nav-label">First Order Objects</div>
+      <div class="nav-list" id="nodeNav"></div>
+    </section>
+
+    <section class="nav-section">
+      <div class="nav-label">Minimal Safe Mode</div>
+      <div class="safe-toggle">
+        <div>
+          <strong style="font-size:var(--text-sm);">PII masking</strong><br>
+          <span class="muted" style="font-size:var(--text-xs);">Hide suspect/victim identifiers</span>
+        </div>
+        <button id="safeModeSwitch" class="switch" aria-label="Toggle Minimal Safe Mode"></button>
+      </div>
+    </section>
+
+    <section class="nav-section">
+      <div class="nav-label">Policies</div>
+      <div class="nav-list">
+        <div class="nav-btn" style="cursor:default;"><div><strong>Need-to-know</strong><span>Assigned investigators only</span></div></div>
+        <div class="nav-btn" style="cursor:default;"><div><strong>PII masking</strong><span>Suspect/victim identifiers redacted by default</span></div></div>
+        <div class="nav-btn" style="cursor:default;"><div><strong>Signed audit</strong><span>Every read emits provenance</span></div></div>
+      </div>
+    </section>
+  </aside>
+
+  <header class="header">
+    <div id="connPill" class="pill warn">Offline cache · not connected to Fluree</div>
+    <div class="header-actions">
+      <button class="secondary-btn" id="focusIncident">Focus incident</button>
+      <button class="icon-btn" data-theme-toggle aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main" id="main">
+    <section class="headline">
+      <div>
+        <h2>Pivot from one incident to the whole graph.</h2>
+        <p>Traverse Incident → EvidenceLog → Suspect/Victim → Agency → RCWMandate → Policy → AccessEvent → Investigator, live from your Fluree ledger through a Cloudflare Worker proxy, with Minimal Safe Mode enforced at every step.</p>
+      </div>
+      <div class="pill warn">Zero-trust · signed access · policy-gated</div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div><div class="pill">Fluree connection</div><h3>Connect via proxy — venlogic-llc ledger</h3></div>
+        <div class="muted">Token stays in Cloudflare, never in this page</div>
+      </div>
+      <div class="config-grid">
+        <label>Proxy base URL (Cloudflare Worker)
+          <input id="cfgBase" type="text" placeholder="https://fluree-proxy.venlogic.workers.dev" />
+        </label>
+        <label>Ledger name
+          <input id="cfgLedger" type="text" value="crimekg/main" />
+        </label>
+        <label>Client key (optional, if your Worker requires one)
+          <input id="cfgToken" type="password" placeholder="Optional shared secret for the Worker" />
+        </label>
+        <label>Query mode
+          <select id="cfgMode">
+            <option value="flureeql">FlureeQL (JSON)</option>
+            <option value="sparql">SPARQL</option>
+          </select>
+        </label>
+      </div>
+      <div class="status-line">
+        <button class="secondary-btn" id="testConn">Test connection &amp; load live data</button>
+        <span id="connStatus" class="muted">Not tested yet — using embedded starter dataset.</span>
+      </div>
+      <p class="footer-note">This dashboard never calls venlogic-llc.fluree.ai directly — it calls your Cloudflare Worker proxy, which holds the real Fluree API token server-side and forwards the request. This avoids exposing your token in browser code and avoids CORS failures. See the "Recommended API Integration Steps" card below for exactly what to build in Cursor and deploy via Cloudflare.</p>
+    </section>
+
+    <section class="kpis">
+      <article class="kpi"><div class="label">Primary incident</div><div class="value">1</div><div class="sub">SEA-2026-0715-0042</div></article>
+      <article class="kpi"><div class="label">Connected objects</div><div class="value" id="kpiConnected">11</div><div class="sub">Across legal and evidence layers</div></article>
+      <article class="kpi"><div class="label">Active policies</div><div class="value">5</div><div class="sub">Need-to-know, PII, audit, retention, sharing</div></article>
+      <article class="kpi"><div class="label">PII fields masked</div><div class="value" id="kpiMasked">3</div><div class="sub">Minimal Safe Mode ON</div></article>
+    </section>
+
+    <section class="top-grid grid">
+      <article class="card">
+        <div class="card-header">
+          <div><div class="pill">Traversal path</div><h3>Incident-to-governance route</h3></div>
+          <div class="muted">Click any step below</div>
+        </div>
+        <div class="path" id="pathTrail"></div>
+        <div class="flow-grid">
+          <div class="step-list" id="stepList"></div>
+          <div class="detail-box" id="detailBox"></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <div><div class="pill">Focused object</div><h3 id="objectTitle">Incident FOO</h3></div>
+          <div class="pill ok" id="objectClass">LAW_ENFORCEMENT_SENSITIVE</div>
+        </div>
+        <p class="muted" id="objectDesc">Central case object used as the first pivot point.</p>
+        <div class="table-wrap" style="margin-top:1rem;">
+          <table><tbody id="objectFields"></tbody></table>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-header">
+          <div><div class="pill">Access history</div><h3>Signed provenance checkpoints</h3></div>
+          <div class="pill ok">Live from AccessEvent nodes</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Evidence</th><th>Access event</th><th>Actor</th><th>Purpose</th><th>Policy</th><th>Signature</th></tr></thead>
+            <tbody id="auditRows"></tbody>
+          </table>
+        </div>
+        <p class="footer-note">Actor identity is a credential reference, not masked by default; suspect/victim identifiers referenced elsewhere in the graph remain governed by Minimal Safe Mode.</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div><div class="pill">Build checklist</div><h3>Recommended API integration steps</h3></div>
+        <div class="muted">Comet + Cursor + Cloudflare + GitHub</div>
+      </div>
+      <ul class="arch-list" id="buildSteps"></ul>
+      <p class="footer-note">Full detail for each step is in the workbook's "API Integration Plan" sheet, including exact Worker code scaffolding to paste into Cursor.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const localData = {
+  objects: {
+    incident: {
+      title: 'Incident FOO', class: 'LAW_ENFORCEMENT_SENSITIVE',
+      desc: 'Canonical burglary event used as the initial graph pivot for evidence, suspect, agency, and governance traversal.',
+      fields: [
+        ['Identifier','SEA-2026-0715-0042',false],
+        ['Type','Burglary · property crime',false],
+        ['Occurred','2026-07-15 02:11 UTC',false],
+        ['Location','Seattle, WA',false],
+        ['Connected evidence','2 logs',false],
+        ['Handled by','Seattle Metro Police Department',false]
+      ]
+    },
+    evidence: {
+      title: 'EvidenceLog FOO', class: 'EVIDENCE_RESTRICTED',
+      desc: 'Evidence nodes store hashes, collector metadata, custody state, and links to signed access history.',
+      fields: [
+        ['Primary evidence','Storefront still image',false],
+        ['Hash','sha256:fd65dbfbe7397f1b...',false],
+        ['Collector','officer:cr-882',false],
+        ['Custody','In custody',false],
+        ['Classified by','Need-to-know access policy',false],
+        ['Audit trail','2 access events across all logs',false]
+      ]
+    },
+    suspect: {
+      title: 'Suspect/Victim FOO', class: 'CONFIDENTIAL_PII',
+      desc: 'Person-of-interest and victim nodes linked to evidence and protected by PII masking rules under Minimal Safe Mode.',
+      fields: [
+        ['Identifier','person-8831',false],
+        ['Name','Jordan Hale',true],
+        ['Aliases','—',true],
+        ['Risk tier','Medium',false],
+        ['Status','Person of interest',false],
+        ['Default control','Identifiers masked unless active casework',false]
+      ]
+    },
+    agency: {
+      title: 'Agency FOO', class: 'INTERNAL_GOVERNANCE',
+      desc: 'Operational and standards-authority entities responsible for the incident and RCW compliance.',
+      fields: [
+        ['Standards authority','Washington Technology Solutions',false],
+        ['Compliance status','Certified current',false],
+        ['Mandates linked','RCW 43.105.054 · RCW 43.105.365',false],
+        ['Purpose','Operational response and standards alignment',false],
+        ['Sharing gate','Interagency exchange blocked if certification is stale',false]
+      ]
+    },
+    governance: {
+      title: 'RCW Mandate FOO', class: 'PUBLIC_LAW',
+      desc: 'Governance nodes convert RCW obligations into traversable graph objects that trigger concrete policies.',
+      fields: [
+        ['Citation','RCW 43.105.054',false],
+        ['Obligation','Statewide standards, policies, interoperability',false],
+        ['Review cycle','Annual',false],
+        ['Derived policies','Need-to-know · signed audit · compliance gating',false],
+        ['Companion mandate','RCW 43.105.365 accuracy procedures',false]
+      ]
+    },
+    policy: {
+      title: 'Policy FOO', class: 'SECURITY_CONTROLLED',
+      desc: 'Zero-trust rules operationalizing RCW mandates: need-to-know, PII masking, signed audit, retention, and governance gating.',
+      fields: [
+        ['policy:zt-need-to-know-01','Permit only if role is investigator and case assignment exists',false],
+        ['policy:zt-pii-mask-02','Mask direct identifiers unless clearance is high and purpose is active casework',false],
+        ['policy:zt-audit-sign-03','Every read/write/traversal checkpoint produces signed audit metadata',false],
+        ['policy:zt-retention-04','Retain per case status and archive rules',false],
+        ['policy:zt-governance-05','Block system-to-system sharing if compliance certification is stale',false]
+      ]
+    },
+    access: {
+      title: 'AccessEvent FOO', class: 'AUDIT_RESTRICTED',
+      desc: 'Signed access checkpoints preserve who viewed which object, why, when, and under which policy decision.',
+      fields: [
+        ['Event','evt-001 · Image evidence read',false],
+        ['Actor','Detective Lee',false],
+        ['Purpose of use','Active casework',false],
+        ['Timestamp','2026-07-15 10:44:55 UTC',false],
+        ['Signature','JWS-signed payload',false],
+        ['Result-set hash','sha256:query-result-001',false]
+      ]
+    },
+    investigator: {
+      title: 'Investigator FOO', class: 'IDENTITY_RESTRICTED',
+      desc: 'Human or software principal whose credential reference and clearance level gate every traversal decision.',
+      fields: [
+        ['Identifier','user:det-lee',false],
+        ['Name','Detective Lee',false],
+        ['Role','Detective',false],
+        ['Clearance','High',false],
+        ['Credential ref','cred:det-lee-2026',false]
+      ]
+    }
+  },
+  steps: [
+    { id:'s1', title:'Start at the incident node', edge:'seed object',
+      summary:'The agent begins with a single Incident FOO and uses it as the stable, non-PII root of the investigation.',
+      query:'{ "select": ["*"], "from": "Incident", "where": ["=", "identifier", "SEA-2026-0715-0042"] }',
+      notes:['Incident exposes evidence, suspect, and agency relationships.','Classification is law-enforcement-sensitive, not PII.','No graph traversal starts without a policy-evaluable root object.'] },
+    { id:'s2', title:'Pivot to evidence logs', edge:'incidentHasEvidence',
+      summary:'The incident expands into forensic objects, each with its own hash, custody state, and access history — no PII fields present.',
+      query:'{ "select": ["?evidence","?name","?hash"], "where": [["incident:SEA-2026-0715-0042","incidentHasEvidence","?evidence"], ["?evidence","name","?name"]] }',
+      notes:['Evidence objects are policy-bearing nodes, not raw blobs.','Each log inherits controls from zero-trust policy objects.','Fully visible under Minimal Safe Mode — no identifiers here.'] },
+    { id:'s3', title:'Pivot to suspect / victim', edge:'incidentHasSuspect',
+      summary:'The suspect/victim node is reachable from the incident but PII predicates (name, identifier, aliases) are masked unless Minimal Safe Mode is turned off by an authorized viewer.',
+      query:'{ "select": ["?suspect","?riskTier","?status"], "where": [["incident:SEA-2026-0715-0042","incidentHasSuspect","?suspect"]], "opts": {"pii-mask": true} }',
+      notes:['PII is controlled by policy:zt-pii-mask-02.','name, identifier, aliases are masked in query projection and UI by default.','Non-PII fields (riskTier, status) remain visible for triage.'] },
+    { id:'s4', title:'Pivot to the agency', edge:'incidentHandledBy',
+      summary:'Operational custody of the incident links the case to agencies responsible for investigation and standards compliance.',
+      query:'{ "select": ["?agency","?name","?complianceStatus"], "where": [["incident:SEA-2026-0715-0042","incidentHandledBy","?agency"]] }',
+      notes:['Agency nodes connect operations to governance.','Sharing decisions reference the agency certification state.','No PII predicates on this node type.'] },
+    { id:'s5', title:'Traverse into RCW mandates', edge:'agencySubjectToMandate',
+      summary:'From the agency, the graph reaches RCW 43.105 mandates that justify standards, interoperability, and correction procedures.',
+      query:'{ "select": ["?rcw","?citation","?obligation"], "where": [["agency:metro-pd","agencySubjectToMandate","?rcw"]] }',
+      notes:['Governance is not off-graph documentation — mandates are inspectable objects.','Agents can explain which legal basis supports a policy gate.'] },
+    { id:'s6', title:'Resolve policy controls', edge:'mandateRequiresPolicy',
+      summary:'Legal mandates resolve into zero-trust controls that govern data access, masking, and interagency sharing.',
+      query:'{ "select": ["?policy","?name"], "where": [["rcw:43.105.054-standards","mandateRequiresPolicy","?policy"]] }',
+      notes:['Policies are reusable graph nodes.','One mandate can enforce multiple operational controls, including PII masking.'] },
+    { id:'s7', title:'Inspect signed provenance', edge:'evidenceAccessedBy / accessGovernedBy',
+      summary:'The next pivot shows who accessed the evidence, under what purpose, and with which signed proof and query-result hash.',
+      query:'{ "select": ["?access","?actor","?purpose","?signature"], "where": [["evidence:img-004991","evidenceAccessedBy","?access"], ["?access","accessPerformedBy","?actor"]] }',
+      notes:['Every read emits an immutable AccessEvent.','Signature and result hash let reviewers reconstruct what happened.','Actor is a credential reference, not raw PII.'] },
+    { id:'s8', title:'Resolve the investigator', edge:'accessPerformedBy',
+      summary:'The final pivot resolves the human or software principal behind the access event, gated by clearance and role.',
+      query:'{ "select": ["?investigator","?role","?clearance"], "where": [["access:evt-001","accessPerformedBy","?investigator"]] }',
+      notes:['This is the zero-trust endpoint of the incident pivot.','Investigator identity fields are internal, not classified as victim/suspect PII.'] }
+  ],
+  audits: [
+    ['Storefront still image','evt-001','Detective Lee','Active casework','policy:zt-audit-sign-03','jws:…payload001'],
+    ['Badge reader export','evt-002','Detective Lee','Active casework','policy:zt-audit-sign-03','jws:…payload002']
+  ],
+  navLabels: {
+    incident:['Central case root'], evidence:['Hashes and custody'], suspect:['Identity and masking — PII gated'],
+    agency:['Operational and standards entities'], governance:['RCW-linked legal objects'],
+    policy:['Zero-trust rule set'], access:['Signed provenance trail'], investigator:['Credentialed human/agent principal']
+  },
+  buildSteps: [
+    'GitHub (venlogic org): create a repo, e.g. venlogic/fluree-incident-proxy, to hold the Cloudflare Worker source and this dashboard file.',
+    'Cursor: scaffold a small Worker (index.js) that accepts /query POST requests, attaches your real Fluree API token from an environment secret, and forwards to https://venlogic-llc.fluree.ai.',
+    'Cloudflare: deploy the Worker, add the Fluree API token as an encrypted secret (not in code), and note the deployed *.workers.dev URL.',
+    'Fluree console: confirm the crimekg/main ledger exists and generate/copy an API token scoped to read (and write, if needed) access.',
+    'Dashboard: paste the Worker URL into "Proxy base URL" above and click Test connection — this replaces the offline embedded dataset with live ledger reads.',
+    'GitHub Pages or Cloudflare Pages: optionally host this HTML file itself so the dashboard has a stable URL alongside the proxy.'
+  ]
+};
+
+let safeMode = true;
+let liveMode = false;
+
+const nodeNav = document.getElementById('nodeNav');
+const objectTitle = document.getElementById('objectTitle');
+const objectClass = document.getElementById('objectClass');
+const objectDesc = document.getElementById('objectDesc');
+const objectFields = document.getElementById('objectFields');
+const pathTrail = document.getElementById('pathTrail');
+const stepList = document.getElementById('stepList');
+const detailBox = document.getElementById('detailBox');
+const auditRows = document.getElementById('auditRows');
+const focusIncidentBtn = document.getElementById('focusIncident');
+const safeModeSwitch = document.getElementById('safeModeSwitch');
+const connPill = document.getElementById('connPill');
+const connStatus = document.getElementById('connStatus');
+const kpiMasked = document.getElementById('kpiMasked');
+const buildStepsEl = document.getElementById('buildSteps');
+
+function maskValue(v, isPii) {
+  if (isPii && safeMode) return { text: '••• masked (Minimal Safe Mode) •••', masked:true };
+  return { text: v, masked:false };
+}
+
+function renderObject(key) {
+  const obj = localData.objects[key];
+  if (!obj) return;
+  objectTitle.textContent = obj.title;
+  objectClass.textContent = obj.class;
+  objectDesc.textContent = obj.desc;
+  let maskedCount = 0;
+  objectFields.innerHTML = obj.fields.map(([k,v,isPii]) => {
+    const m = maskValue(v, isPii);
+    if (m.masked) maskedCount++;
+    return `<tr><th>${k}</th><td class="${m.masked?'masked':''}">${m.text}${m.masked?'<span class="masked-badge">PII</span>':''}</td></tr>`;
+  }).join('');
+  kpiMasked.textContent = maskedCount;
+  [...nodeNav.querySelectorAll('.nav-btn')].forEach(btn => btn.classList.toggle('active', btn.dataset.key === key));
+}
+
+function renderNav() {
+  nodeNav.innerHTML = Object.entries(localData.navLabels).map(([key,[desc]]) => `
+    <button class="nav-btn ${key==='incident' ? 'active' : ''}" data-key="${key}">
+      <div><strong>${localData.objects[key].title.replace(' FOO','')}</strong><span>${desc}</span></div>
+    </button>`).join('');
+  nodeNav.addEventListener('click', (e) => {
+    const btn = e.target.closest('.nav-btn[data-key]');
+    if (!btn) return;
+    renderObject(btn.dataset.key);
+  });
+}
+
+function renderPath() {
+  const labels = ['Incident','EvidenceLog','Suspect/Victim','Agency','RCWMandate','Policy','AccessEvent','Investigator'];
+  pathTrail.innerHTML = labels.map(l => `<span>${l}</span>`).join('<span>→</span>');
+}
+
+function renderSteps() {
+  stepList.innerHTML = localData.steps.map((step,i) => `
+    <button class="step ${i===0?'active':''}" data-step="${step.id}">
+      <div class="meta">${step.edge}</div>
+      <strong>${step.title}</strong>
+      <span class="muted">${step.summary}</span>
+    </button>`).join('');
+  const show = (id) => {
+    const step = localData.steps.find(s => s.id === id) || localData.steps[0];
+    [...stepList.querySelectorAll('.step')].forEach(el => el.classList.toggle('active', el.dataset.step === id));
+    const notePii = step.id === 's3' ? `<div class="pill err" style="margin-bottom:.75rem;">Minimal Safe Mode ${safeMode ? 'ON — PII masked in this response' : 'OFF — PII fields will render'}</div>` : '';
+    detailBox.innerHTML = `
+      ${notePii}
+      <div class="pill">${step.edge}</div>
+      <h3 style="margin-top:1rem;">${step.title}</h3>
+      <p class="muted" style="margin-top:.5rem;">${step.summary}</p>
+      <pre>${step.query}</pre>
+      <ul>${step.notes.map(n => `<li>${n}</li>`).join('')}</ul>
+    `;
+  };
+  stepList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.step[data-step]');
+    if (!btn) return;
+    show(btn.dataset.step);
+  });
+  show('s1');
+  window._showStep = show;
+}
+
+function renderAudit() {
+  auditRows.innerHTML = localData.audits.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+}
+
+function renderBuildSteps() {
+  buildStepsEl.innerHTML = localData.buildSteps.map((s,i) => `<li><strong>${i+1}.</strong> ${s}</li>`).join('');
+}
+
+safeModeSwitch.classList.toggle('off', !safeMode);
+safeModeSwitch.addEventListener('click', () => {
+  safeMode = !safeMode;
+  safeModeSwitch.classList.toggle('off', !safeMode);
+  const activeKey = document.querySelector('.nav-btn.active')?.dataset.key || 'incident';
+  renderObject(activeKey);
+  const activeStep = document.querySelector('.step.active')?.dataset.step || 's1';
+  if (window._showStep) window._showStep(activeStep);
+});
+
+document.getElementById('testConn').addEventListener('click', async () => {
+  const base = document.getElementById('cfgBase').value.trim();
+  const ledger = document.getElementById('cfgLedger').value.trim();
+  const token = document.getElementById('cfgToken').value.trim();
+  if (!base) {
+    connStatus.textContent = 'Enter your Cloudflare Worker proxy URL first (see Build Checklist below).';
+    return;
+  }
+  connStatus.textContent = 'Testing connection…';
+  try {
+    const headers = { 'Content-Type':'application/json' };
+    if (token) headers['X-Client-Key'] = token;
+    const resp = await fetch(base.replace(/\/$/,'') + '/health', { method:'GET', headers, mode:'cors' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    liveMode = true;
+    connPill.className = 'pill ok';
+    connPill.textContent = 'Connected via proxy · ' + ledger;
+    connStatus.textContent = 'Connected. Live queries will be attempted for each step (falls back to cache on error).';
+  } catch (err) {
+    liveMode = false;
+    connPill.className = 'pill warn';
+    connPill.textContent = 'Offline cache · not connected to Fluree';
+    connStatus.textContent = 'Could not reach the proxy yet. Deploy the Cloudflare Worker first (see Build Checklist) — using the embedded starter dataset in the meantime.';
+  }
+});
+
+(function themeToggle(){
+  const t = document.querySelector('[data-theme-toggle]');
+  const r = document.documentElement;
+  let d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  r.setAttribute('data-theme', d);
+  t.addEventListener('click', () => {
+    d = d === 'dark' ? 'light' : 'dark';
+    r.setAttribute('data-theme', d);
+  });
+})();
+
+focusIncidentBtn.addEventListener('click', () => {
+  renderObject('incident');
+  window.scrollTo({ top:0, behavior:'smooth' });
+});
+
+renderNav();
+renderObject('incident');
+renderPath();
+renderSteps();
+renderAudit();
+renderBuildSteps();
+</script>
+</body>
+</html>
